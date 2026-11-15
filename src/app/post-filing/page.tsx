@@ -10,7 +10,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
-import { usePoc } from "@/components/PocProvider";
+import { buildPdfHref, usePoc } from "@/components/PocProvider";
 import { ReturnFiling, WeightCategory } from "@/lib/adapters/types";
 import {
   TAX_PERIOD_MONTHS,
@@ -23,7 +23,8 @@ import { generateValidTestVin, validateVin } from "@/lib/hvut/vin-validator";
 type PostTab = "VIN_CORRECTION" | "AMENDMENT" | "FORM_8849";
 
 export default function PostFilingPage() {
-  const { users, businesses, filings, activeUserId, activeBusinessId, refresh } = usePoc();
+  const { users, businesses, vehicles, filings, activeUserId, activeBusinessId, refresh } =
+    usePoc();
   const activeUser = users.find((u) => u.id === activeUserId);
   const visibleBusinesses = useMemo(() => {
     if (!activeUser) return [];
@@ -39,6 +40,11 @@ export default function PostFilingPage() {
         (f) => f.businessId === activeBiz?.id && f.status === "ACCEPTED",
       ),
     [filings, activeBiz],
+  );
+
+  const activeBizVehicles = useMemo(
+    () => (activeBiz ? vehicles.filter((v) => v.businessId === activeBiz.id) : []),
+    [vehicles, activeBiz],
   );
 
   const [tab, setTab] = useState<PostTab>("VIN_CORRECTION");
@@ -69,8 +75,51 @@ export default function PostFilingPage() {
   const selectedPriorFiling =
     acceptedFilings.find((f) => f.id === selectedFilingId) || acceptedFilings[0];
 
+  const priorVehicleOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const list: {
+      vin: string;
+      unitNumber?: string;
+      weightCategory: WeightCategory;
+      isLogging: boolean;
+      label: string;
+    }[] = [];
+
+    for (const l of selectedPriorFiling?.lines || []) {
+      const vin = l.vin?.trim().toUpperCase();
+      if (!vin || seen.has(vin)) continue;
+      seen.add(vin);
+      list.push({
+        vin,
+        unitNumber: l.unitNumber,
+        weightCategory: l.weightCategory,
+        isLogging: Boolean(l.isLogging),
+        label: `${l.unitNumber ? `Unit ${l.unitNumber} — ` : ""}${vin} (${l.weightCategory})`,
+      });
+    }
+
+    for (const v of activeBizVehicles) {
+      const vin = v.vin.trim().toUpperCase();
+      if (!vin || seen.has(vin)) continue;
+      seen.add(vin);
+      list.push({
+        vin,
+        unitNumber: v.unitNumber,
+        weightCategory: v.defaultWeightCategory,
+        isLogging: Boolean(v.isLogging),
+        label: `${v.unitNumber ? `Unit ${v.unitNumber} — ` : ""}${vin} (${v.defaultWeightCategory}) · Fleet`,
+      });
+    }
+
+    return list;
+  }, [selectedPriorFiling, activeBizVehicles]);
+
   const effectivePriorVin =
-    priorVin || selectedPriorFiling?.lines[0]?.vin || generateValidTestVin(999111);
+    priorVin || priorVehicleOptions[0]?.vin || generateValidTestVin(999111);
+
+  const matchedPriorVehicle = priorVehicleOptions.find(
+    (v) => v.vin === effectivePriorVin.trim().toUpperCase(),
+  );
 
   const amendIncrementalTax =
     amendReason === "WEIGHT_INCREASE"
@@ -102,8 +151,12 @@ export default function PostFilingPage() {
               filingId: "draft",
               vin: check.normalized,
               priorVin: effectivePriorVin,
-              weightCategory: selectedPriorFiling?.lines[0]?.weightCategory || "V",
-              isLogging: false,
+              unitNumber: matchedPriorVehicle?.unitNumber,
+              weightCategory:
+                matchedPriorVehicle?.weightCategory ||
+                selectedPriorFiling?.lines[0]?.weightCategory ||
+                "V",
+              isLogging: matchedPriorVehicle?.isLogging || false,
               isAgricultural: false,
               lineType: "VIN_CORRECTION",
               computedTax: 0,
@@ -167,7 +220,7 @@ export default function PostFilingPage() {
       const saveRes = await fetch("/api/filings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, business: activeBiz }),
       });
       const saveData = await saveRes.json();
       if (!saveRes.ok) {
@@ -184,6 +237,8 @@ export default function PostFilingPage() {
           cardNumber: "4242424242424242",
           pinSignature: "54321",
           addOnSms: true,
+          business: activeBiz,
+          filing: saveData.filing,
           taxPayment: {
             id: `TAX-${Date.now()}`,
             filingId: saveData.filing.id,
@@ -274,7 +329,12 @@ export default function PostFilingPage() {
                 </span>
                 <select
                   value={selectedPriorFiling?.id || ""}
-                  onChange={(e) => setSelectedFilingId(e.target.value)}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    setSelectedFilingId(nextId);
+                    const picked = acceptedFilings.find((f) => f.id === nextId);
+                    setPriorVin(picked?.lines[0]?.vin || "");
+                  }}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white"
                 >
                   {acceptedFilings.length === 0 ? (
@@ -283,11 +343,32 @@ export default function PostFilingPage() {
                     acceptedFilings.map((f) => (
                       <option key={f.id} value={f.id}>
                         {f.id} ({f.taxYear}) — {f.lines[0]?.vin}
+                        {f.lines.length > 1 ? ` (+${f.lines.length - 1} more)` : ""}
                       </option>
                     ))
                   )}
                 </select>
               </label>
+
+              {priorVehicleOptions.length > 0 && (
+                <label className="space-y-1 sm:col-span-2">
+                  <span className="text-xs font-semibold text-slate-700">
+                    Fetched Vehicle from Return / Fleet Roster
+                  </span>
+                  <select
+                    value={matchedPriorVehicle?.vin || ""}
+                    onChange={(e) => setPriorVin(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-slate-50 font-mono text-xs"
+                  >
+                    <option value="">-- Choose a previously filed vehicle --</option>
+                    {priorVehicleOptions.map((v) => (
+                      <option key={v.vin} value={v.vin}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-slate-700">Incorrect Prior VIN</span>
@@ -486,7 +567,7 @@ export default function PostFilingPage() {
           <div className="flex flex-wrap gap-3">
             {resultFiling.status === "ACCEPTED" && (
               <a
-                href={`/api/filings/${resultFiling.id}/schedule1`}
+                href={buildPdfHref("schedule1", resultFiling, activeBiz)}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-700 text-white text-xs font-semibold"

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { checkoutAndTransmitFiling } from "@/lib/hvut/filing-service";
-import { PackageType, TaxPaymentInstruction, UserRole } from "@/lib/adapters/types";
+import {
+  BusinessEntity,
+  PackageType,
+  ReturnFiling,
+  TaxPaymentInstruction,
+  UserRole,
+} from "@/lib/adapters/types";
 
 export async function POST(
   request: Request,
@@ -24,6 +30,8 @@ export async function POST(
       taxPayment: TaxPaymentInstruction;
       hasUnlimitedAnnualPlan?: boolean;
       skipTransmit?: boolean;
+      business?: BusinessEntity;
+      filing?: ReturnFiling;
     };
 
     const result = await checkoutAndTransmitFiling({
@@ -43,6 +51,8 @@ export async function POST(
       taxPayment: body.taxPayment,
       hasUnlimitedAnnualPlan: body.hasUnlimitedAnnualPlan,
       skipTransmit: body.skipTransmit,
+      business: body.business,
+      filing: body.filing,
     });
 
     if (!result.ok) {

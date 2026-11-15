@@ -1,13 +1,30 @@
 import { NextResponse } from "next/server";
-import { getBusinessById, getFilingById } from "@/lib/hvut/db";
+import { getBusinessById, getFilingById, saveFiling, upsertBusiness } from "@/lib/hvut/db";
 import { pdfGenerator } from "@/lib/hvut/filing-service";
+import { BusinessEntity, ReturnFiling } from "@/lib/adapters/types";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const filing = getFilingById(id);
+  let filing = getFilingById(id);
+  const ctx = new URL(request.url).searchParams.get("ctx");
+  if (ctx) {
+    try {
+      const decoded = JSON.parse(Buffer.from(ctx, "base64url").toString("utf8")) as {
+        filing?: ReturnFiling;
+        business?: BusinessEntity;
+      };
+      if (decoded.business) upsertBusiness(decoded.business);
+      if (decoded.filing && !filing) {
+        saveFiling(decoded.filing);
+        filing = decoded.filing;
+      }
+    } catch {
+      // Ignore malformed context parameter
+    }
+  }
   if (!filing) {
     return NextResponse.json({ error: "Filing not found" }, { status: 404 });
   }
@@ -25,4 +42,3 @@ export async function GET(
     },
   });
 }
-

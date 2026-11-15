@@ -1,19 +1,40 @@
 import { NextResponse } from "next/server";
-import { addAuditLog, getBusinessById, listVehicles, saveFiling } from "@/lib/hvut/db";
+import {
+  addAuditLog,
+  getBusinessById,
+  listVehicles,
+  saveFiling,
+  upsertBusiness,
+  upsertVehicle,
+} from "@/lib/hvut/db";
 import { calculateVehicleTax } from "@/lib/hvut/tax-engine";
-import { FilingVehicleLine, ReturnFiling } from "@/lib/adapters/types";
+import { BusinessEntity, FilingVehicleLine, ReturnFiling, Vehicle } from "@/lib/adapters/types";
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
-  const business = getBusinessById(id);
+  const body = (await request.json().catch(() => ({}))) as {
+    taxYear?: string;
+    business?: BusinessEntity;
+    vehicles?: Vehicle[];
+  };
+
+  let business = getBusinessById(id);
+  if (!business && body.business && body.business.id === id) {
+    business = upsertBusiness(body.business);
+  }
   if (!business) {
     return NextResponse.json({ error: "Business not found" }, { status: 404 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as { taxYear?: string };
+  for (const v of body.vehicles ?? []) {
+    if (v?.id && v.businessId === id) {
+      upsertVehicle(v);
+    }
+  }
+
   const taxYear = body.taxYear || "2026-2027";
   const activeVehicles = listVehicles(id).filter((v) => v.status === "ACTIVE");
 

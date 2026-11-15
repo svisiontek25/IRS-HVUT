@@ -359,7 +359,7 @@ export function listUsers(): User[] {
 export function createUser(user: User): User {
   const db = getDb();
   db.prepare(
-    `INSERT INTO users (id, email, name, role, mfa_enabled, created_at, metadata_json)
+    `INSERT OR REPLACE INTO users (id, email, name, role, mfa_enabled, created_at, metadata_json)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     user.id,

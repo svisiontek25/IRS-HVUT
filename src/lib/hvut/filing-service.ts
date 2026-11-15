@@ -16,6 +16,7 @@ import {
   getFilingById,
   getSimulatorConfig,
   saveFiling,
+  upsertBusiness,
   upsertVehicle,
 } from "./db";
 import { lookupRejection } from "../adapters/rejection-codes";
@@ -39,10 +40,22 @@ export async function checkoutAndTransmitFiling(params: {
   taxPayment: TaxPaymentInstruction;
   hasUnlimitedAnnualPlan?: boolean;
   skipTransmit?: boolean;
+  business?: BusinessEntity;
+  filing?: ReturnFiling;
 }) {
-  const filing = getFilingById(params.filingId);
+  if (params.business) {
+    upsertBusiness(params.business);
+  }
+  let filing = getFilingById(params.filingId);
+  if (!filing && params.filing) {
+    saveFiling(params.filing);
+    filing = getFilingById(params.filingId) ?? params.filing;
+  }
   if (!filing) throw new Error("Filing not found.");
-  const business = getBusinessById(filing.businessId);
+  let business = getBusinessById(filing.businessId);
+  if (!business && params.business) {
+    business = upsertBusiness(params.business);
+  }
   if (!business) throw new Error("Business entity not found.");
 
   // 1. Stream A: Simulated Platform Service Fee Checkout (only charge if not already PAID for this return)

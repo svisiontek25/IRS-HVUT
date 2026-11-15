@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
-import { usePoc } from "@/components/PocProvider";
+import { buildPdfHref, usePoc } from "@/components/PocProvider";
 import { ReturnFiling } from "@/lib/adapters/types";
 import { lookupRejection } from "@/lib/adapters/rejection-codes";
 
@@ -104,7 +104,11 @@ export default function DashboardPage() {
       const res = await fetch(`/api/businesses/${activeBiz.id}/carry-forward`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taxYear: "2026-2027" }),
+        body: JSON.stringify({
+          taxYear: "2026-2027",
+          business: activeBiz,
+          vehicles: bizVehicles,
+        }),
       });
       const data = await res.json();
       if (res.ok && data.filing) {
@@ -307,7 +311,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-3.5 py-2.5 border-r border-[#e5e5e5] text-center">
                         <a
-                          href={`/api/filings/${f.id}/form2290`}
+                          href={buildPdfHref("form2290", f, activeBiz)}
                           target="_blank"
                           rel="noreferrer"
                           title="View Form 2290 PDF"
@@ -319,7 +323,7 @@ export default function DashboardPage() {
                       <td className="px-3.5 py-2.5 border-r border-[#e5e5e5] text-center">
                         {f.status === "ACCEPTED" ? (
                           <a
-                            href={`/api/filings/${f.id}/schedule1`}
+                            href={buildPdfHref("schedule1", f, activeBiz)}
                             target="_blank"
                             rel="noreferrer"
                             title="Download IRS Watermarked Schedule 1 PDF"
@@ -329,7 +333,7 @@ export default function DashboardPage() {
                           </a>
                         ) : f.taxPayment?.method === "CHECK" ? (
                           <a
-                            href={`/api/filings/${f.id}/voucher`}
+                            href={buildPdfHref("voucher", f, activeBiz)}
                             target="_blank"
                             rel="noreferrer"
                             title="Form 2290-V Voucher"

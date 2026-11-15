@@ -32,7 +32,7 @@ import {
   Upload,
 } from "lucide-react";
 import { IrsHvutLogo } from "@/components/AppShell";
-import { usePoc } from "@/components/PocProvider";
+import { buildPdfHref, usePoc } from "@/components/PocProvider";
 import {
   FilingVehicleLine,
   FormType,
@@ -372,16 +372,110 @@ function FileNewWizardInner() {
     [vehicles, activeBusiness],
   );
 
+  const priorBusinessVehicles = useMemo(() => {
+    if (!activeBusiness) return [];
+    const seen = new Set<string>();
+    const list: {
+      vin: string;
+      unitNumber?: string;
+      weightCategory: WeightCategory;
+      isLogging: boolean;
+      isAgricultural: boolean;
+      sourceLabel: string;
+    }[] = [];
+
+    const statusRank = (s: string) =>
+      s === "ACCEPTED" ? 0 : s === "PAID" || s === "SUBMITTED" ? 1 : 2;
+    const bizFilings = [...filings]
+      .filter((f) => f.businessId === activeBusiness.id && f.id !== editingId)
+      .sort((a, b) => {
+        const r = statusRank(a.status) - statusRank(b.status);
+        if (r !== 0) return r;
+        return (b.acceptedAt || b.submittedAt || b.createdAt).localeCompare(
+          a.acceptedAt || a.submittedAt || a.createdAt,
+        );
+      });
+
+    for (const f of bizFilings) {
+      for (const l of f.lines) {
+        const vin = l.vin?.trim().toUpperCase();
+        if (!vin || seen.has(vin)) continue;
+        seen.add(vin);
+        list.push({
+          vin,
+          unitNumber: l.unitNumber,
+          weightCategory: l.weightCategory,
+          isLogging: Boolean(l.isLogging),
+          isAgricultural: Boolean(l.isAgricultural),
+          sourceLabel: `${f.taxYear} ${f.status === "ACCEPTED" ? "Filed" : f.status}`,
+        });
+      }
+    }
+
+    for (const v of businessRoster) {
+      const vin = v.vin.trim().toUpperCase();
+      if (!vin || seen.has(vin)) continue;
+      seen.add(vin);
+      list.push({
+        vin,
+        unitNumber: v.unitNumber,
+        weightCategory: v.defaultWeightCategory,
+        isLogging: Boolean(v.isLogging),
+        isAgricultural: Boolean(v.isAgricultural),
+        sourceLabel: "Saved Fleet Vehicle",
+      });
+    }
+
+    return list;
+  }, [activeBusiness, filings, businessRoster, editingId]);
+
+  function findPriorVehicle(unitNumber?: string, vin?: string) {
+    const cleanUnit = unitNumber?.trim().toLowerCase();
+    const cleanVin = vin?.trim().toUpperCase();
+    if (cleanUnit) {
+      const byUnit = priorBusinessVehicles.find(
+        (v) => v.unitNumber?.trim().toLowerCase() === cleanUnit,
+      );
+      if (byUnit) return byUnit;
+    }
+    if (cleanVin) {
+      const byVin = priorBusinessVehicles.find((v) => v.vin === cleanVin);
+      if (byVin) return byVin;
+    }
+    return undefined;
+  }
+
   function openAddVehicleModal(preferredType: VehicleLineType) {
     setEditLineIndex(null);
-    setDraftLine(makeDefaultLine(editingId || "NEW", preferredType, firstUsedMonth));
+    const base = makeDefaultLine(editingId || "NEW", preferredType, firstUsedMonth);
+    if (preferredType === "VIN_CORRECTION" && priorBusinessVehicles.length > 0) {
+      const usedPriorVins = new Set(
+        lines.map((l) => (l.priorVin || l.vin || "").trim().toUpperCase()),
+      );
+      const nextPrior =
+        priorBusinessVehicles.find((v) => !usedPriorVins.has(v.vin)) || priorBusinessVehicles[0];
+      if (nextPrior) {
+        base.priorVin = nextPrior.vin;
+        base.unitNumber = nextPrior.unitNumber || "";
+        base.weightCategory = nextPrior.weightCategory;
+        base.isLogging = nextPrior.isLogging;
+        base.isAgricultural = nextPrior.isAgricultural;
+      }
+    }
+    setDraftLine(base);
     setModalError(null);
     setShowAddModal(true);
   }
 
   function openEditVehicleModal(idx: number) {
     setEditLineIndex(idx);
-    setDraftLine({ ...lines[idx] });
+    const current = { ...lines[idx] };
+    if (current.lineType === "VIN_CORRECTION" && !current.priorVin?.trim()) {
+      const matched =
+        findPriorVehicle(current.unitNumber, current.vin) || priorBusinessVehicles[0];
+      current.priorVin = matched?.vin || current.vin?.trim().toUpperCase() || "";
+    }
+    setDraftLine(current);
     setModalError(null);
     setShowAddModal(true);
   }
@@ -464,6 +558,7 @@ function FileNewWizardInner() {
         id: `line-imp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         filingId: editingId || "NEW",
         vin: v.vin.toUpperCase(),
+        priorVin: targetLt === "VIN_CORRECTION" ? v.vin.toUpperCase() : undefined,
         unitNumber: v.unitNumber,
         weightCategory: v.defaultWeightCategory,
         isLogging: v.isLogging,
@@ -573,6 +668,7 @@ function FileNewWizardInner() {
         id: editingId,
         displayReturnId,
         businessId: activeBusiness.id,
+        business: activeBusiness,
         formType,
         amendedReason: formType === "2290_AMEND" ? amendedReason : undefined,
         taxYear,
@@ -645,6 +741,8 @@ function FileNewWizardInner() {
           pinSignature,
           hasUnlimitedAnnualPlan,
           skipTransmit: true,
+          business: activeBusiness,
+          filing: f,
           taxPayment: {
             id: f.taxPayment?.id || `TP-${Date.now()}`,
             filingId: f.id,
@@ -698,6 +796,8 @@ function FileNewWizardInner() {
           pinSignature: pinSignature.trim(),
           hasUnlimitedAnnualPlan,
           skipTransmit: false,
+          business: activeBusiness,
+          filing: savedFiling,
           taxPayment: savedFiling.taxPayment || {
             id: `TP-${Date.now()}`,
             filingId: savedFiling.id,
@@ -724,6 +824,24 @@ function FileNewWizardInner() {
     if (step === 1 && !activeBusiness) {
       setBannerError("Please select or add a business before continuing.");
       return;
+    }
+    if (step === 2 && formType === "2290_VIN_CORR" && lines.length === 0 && !editFilingId) {
+      if (priorBusinessVehicles.length > 0) {
+        const seededLines: FilingVehicleLine[] = priorBusinessVehicles.map((v, idx) => ({
+          id: `line-vincorr-${Date.now()}-${idx}`,
+          filingId: editingId || "NEW",
+          vin: v.vin,
+          priorVin: v.vin,
+          unitNumber: v.unitNumber,
+          weightCategory: v.weightCategory,
+          isLogging: v.isLogging,
+          isAgricultural: v.isAgricultural,
+          lineType: "VIN_CORRECTION",
+          computedTax: 0,
+        }));
+        setLines(seededLines);
+      }
+      setActiveVehicleTab("VIN_CORRECTION");
     }
     if (step === 3 && lines.length === 0 && !priorYearSuspendedAllUnderLimit) {
       setBannerError("Please add or import at least 1 vehicle before clicking Next.");
@@ -2024,7 +2142,7 @@ function FileNewWizardInner() {
                     {savedFiling && (
                       <div>
                         <a
-                          href={`/api/filings/${savedFiling.id}/form2290`}
+                          href={buildPdfHref("form2290", savedFiling, activeBusiness)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[2px] bg-[#d93025] hover:bg-[#b52219] text-white font-bold"
@@ -2127,7 +2245,7 @@ function FileNewWizardInner() {
               <div className="flex flex-wrap justify-center gap-2.5 pt-2">
                 {savedFiling.status === "ACCEPTED" && (
                   <a
-                    href={`/api/filings/${savedFiling.id}/schedule1`}
+                    href={buildPdfHref("schedule1", savedFiling, activeBusiness)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[2px] bg-[#1e40af] hover:bg-[#1e3a8a] text-white text-xs font-bold"
@@ -2136,7 +2254,7 @@ function FileNewWizardInner() {
                   </a>
                 )}
                 <a
-                  href={`/api/filings/${savedFiling.id}/form2290`}
+                  href={buildPdfHref("form2290", savedFiling, activeBusiness)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[2px] bg-[#d93025] text-white text-xs font-bold"
@@ -2145,7 +2263,7 @@ function FileNewWizardInner() {
                 </a>
                 {taxMethod === "CHECK" && (
                   <a
-                    href={`/api/filings/${savedFiling.id}/voucher`}
+                    href={buildPdfHref("voucher", savedFiling, activeBusiness)}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-[2px] border border-[#cccccc] bg-white text-xs font-bold text-[#222]"
@@ -2301,9 +2419,25 @@ function FileNewWizardInner() {
                   <span className="font-bold text-[#222]">Vehicle Section</span>
                   <select
                     value={draftLine.lineType}
-                    onChange={(e) =>
-                      setDraftLine((d) => ({ ...d, lineType: e.target.value as VehicleLineType }))
-                    }
+                    onChange={(e) => {
+                      const nextType = e.target.value as VehicleLineType;
+                      setDraftLine((d) => {
+                        if (nextType !== "VIN_CORRECTION" || d.priorVin?.trim()) {
+                          return { ...d, lineType: nextType };
+                        }
+                        const matched =
+                          findPriorVehicle(d.unitNumber, d.vin) || priorBusinessVehicles[0];
+                        return {
+                          ...d,
+                          lineType: nextType,
+                          priorVin: matched?.vin || d.vin?.trim().toUpperCase() || "",
+                          unitNumber: d.unitNumber || matched?.unitNumber || "",
+                          weightCategory: matched?.weightCategory || d.weightCategory,
+                          isLogging: matched ? matched.isLogging : d.isLogging,
+                          isAgricultural: matched ? matched.isAgricultural : d.isAgricultural,
+                        };
+                      });
+                    }}
                     className="w-full border border-[#cccccc] rounded-[2px] px-2.5 py-2 text-sm bg-white"
                   >
                     <option value="TAXABLE">Taxable Vehicle</option>
@@ -2320,7 +2454,31 @@ function FileNewWizardInner() {
                   <span className="font-bold text-[#222]">Unit Number</span>
                   <input
                     value={draftLine.unitNumber || ""}
-                    onChange={(e) => setDraftLine((d) => ({ ...d, unitNumber: e.target.value }))}
+                    onChange={(e) => {
+                      const nextUnit = e.target.value;
+                      setDraftLine((d) => {
+                        if (d.lineType !== "VIN_CORRECTION") {
+                          return { ...d, unitNumber: nextUnit };
+                        }
+                        const trimmed = nextUnit.trim().toLowerCase();
+                        const byUnit = trimmed
+                          ? priorBusinessVehicles.find(
+                              (v) => v.unitNumber?.trim().toLowerCase() === trimmed,
+                            )
+                          : undefined;
+                        if (byUnit) {
+                          return {
+                            ...d,
+                            unitNumber: nextUnit,
+                            priorVin: byUnit.vin,
+                            weightCategory: byUnit.weightCategory,
+                            isLogging: byUnit.isLogging,
+                            isAgricultural: byUnit.isAgricultural,
+                          };
+                        }
+                        return { ...d, unitNumber: nextUnit };
+                      });
+                    }}
                     placeholder="e.g. 101"
                     className="w-full border border-[#cccccc] rounded-[2px] px-2.5 py-2 text-sm"
                   />
@@ -2328,20 +2486,65 @@ function FileNewWizardInner() {
               </div>
 
               {draftLine.lineType === "VIN_CORRECTION" && (
-                <label className="block space-y-1">
-                  <span className="font-bold text-[#222]">
-                    Previous VIN<span className="text-red-600">*</span>
-                  </span>
-                  <input
-                    maxLength={17}
-                    value={draftLine.priorVin || ""}
-                    onChange={(e) =>
-                      setDraftLine((d) => ({ ...d, priorVin: e.target.value.toUpperCase() }))
-                    }
-                    placeholder="Enter previous incorrect 17-char VIN"
-                    className="w-full border border-[#cccccc] rounded-[2px] px-2.5 py-2 text-sm font-mono uppercase"
-                  />
-                </label>
+                <div className="space-y-2">
+                  {priorBusinessVehicles.length > 0 && (
+                    <label className="block space-y-1">
+                      <span className="font-bold text-[#222] text-xs flex items-center justify-between">
+                        <span>Fetched Previous Vehicle (Filed Return / Fleet Roster)</span>
+                        <span className="text-[11px] font-normal text-[#0073b7]">
+                          {priorBusinessVehicles.length} vehicle(s) available
+                        </span>
+                      </span>
+                      <select
+                        value={
+                          priorBusinessVehicles.some(
+                            (v) => v.vin === (draftLine.priorVin || "").trim().toUpperCase(),
+                          )
+                            ? (draftLine.priorVin || "").trim().toUpperCase()
+                            : ""
+                        }
+                        onChange={(e) => {
+                          const picked = priorBusinessVehicles.find(
+                            (v) => v.vin === e.target.value,
+                          );
+                          if (!picked) return;
+                          setDraftLine((d) => ({
+                            ...d,
+                            priorVin: picked.vin,
+                            unitNumber: picked.unitNumber || d.unitNumber || "",
+                            weightCategory: picked.weightCategory,
+                            isLogging: picked.isLogging,
+                            isAgricultural: picked.isAgricultural,
+                          }));
+                        }}
+                        className="w-full border border-[#cccccc] rounded-[2px] px-2.5 py-2 text-xs bg-[#f8fafc] font-mono"
+                      >
+                        <option value="">-- Select previously filed vehicle --</option>
+                        {priorBusinessVehicles.map((v) => (
+                          <option key={v.vin} value={v.vin}>
+                            {v.unitNumber ? `Unit ${v.unitNumber} — ` : ""}
+                            {v.vin} ({v.weightCategory}) · {v.sourceLabel}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
+                  <label className="block space-y-1">
+                    <span className="font-bold text-[#222]">
+                      Previous VIN<span className="text-red-600">*</span>
+                    </span>
+                    <input
+                      maxLength={17}
+                      value={draftLine.priorVin || ""}
+                      onChange={(e) =>
+                        setDraftLine((d) => ({ ...d, priorVin: e.target.value.toUpperCase() }))
+                      }
+                      placeholder="Enter previous incorrect 17-char VIN"
+                      className="w-full border border-[#cccccc] rounded-[2px] px-2.5 py-2 text-sm font-mono uppercase"
+                    />
+                  </label>
+                </div>
               )}
 
               <div>
