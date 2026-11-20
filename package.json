@@ -28,6 +28,7 @@
     "@types/papaparse": "^5.3.16",
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.4",
+    "marked": "^18.2.1",
     "tailwindcss": "^4.1.7",
     "typescript": "^5.8.3"
   }
