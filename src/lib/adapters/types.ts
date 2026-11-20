@@ -253,6 +253,8 @@ export interface CheckoutChargeRequest {
   filing: ReturnFiling;
   cardNumber: string;
   cardType?: string;
+  paymentMethodId?: string;
+  stripeToken?: string;
   promoCode?: string;
   packageType?: PackageType;
   addOnFax?: boolean;

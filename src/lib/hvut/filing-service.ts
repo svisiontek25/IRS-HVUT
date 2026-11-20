@@ -1,5 +1,6 @@
 import { SimulatedMefAdapter } from "../adapters/mef-simulator";
 import { TaxBanditsAdapter } from "../adapters/taxbandits-adapter";
+import { StripeAdapter } from "../adapters/stripe-adapter";
 import { MockCheckoutAdapter } from "../adapters/payment-simulator";
 import { MockWatermarkedPdfAdapter } from "../adapters/pdf-generator";
 import {
@@ -64,7 +65,7 @@ export async function checkoutAndTransmitFiling(params: {
     filing.status === "PAID" && filing.serviceOrder?.paymentStatus === "PAID";
 
   if (!alreadyPaid) {
-    const paymentGateway = new MockCheckoutAdapter();
+    const paymentGateway = new StripeAdapter();
     const charge = await paymentGateway.chargeServiceFee({
       filing,
       cardNumber: params.cardNumber,

@@ -310,6 +310,14 @@ function FileNewWizardInner() {
     }
   }, [editFilingId, filings, setActiveBusinessId]);
 
+  const stripeSessionId = searchParams.get("stripe_session_id");
+  useEffect(() => {
+    if (stripeSessionId) {
+      setBannerError(null);
+      setStep(7);
+    }
+  }, [stripeSessionId]);
+
   useEffect(() => {
     if (editFilingId) return;
     if (paramFormType) {
@@ -781,6 +789,49 @@ function FileNewWizardInner() {
       setSavedFiling(data.filing);
       await refresh();
       setStep(7);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleStripeCheckoutRedirect() {
+    if (lines.length === 0 && !priorYearSuspendedAllUnderLimit) {
+      setBannerError("Please add at least one vehicle in Step 3 before checking out.");
+      return;
+    }
+    setBusy(true);
+    setBannerError(null);
+    try {
+      const f = await saveFilingToServer(
+        savedFiling?.status === "EDITING_AFTER_REJECT" ? "EDITING_AFTER_REJECT" : "VALIDATED",
+      );
+      if (!f) return;
+
+      const res = await fetch("/api/checkout/stripe-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filingId: f.id,
+          packageType,
+          promoCode: promoCode.trim() || undefined,
+          addOnFax,
+          addOnSms,
+          hasUnlimitedAnnualPlan,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        setBannerError(
+          data.error ||
+            "Stripe is in simulation mode. You can test card payments below using test card 4242...",
+        );
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch {
+      setBannerError("Unable to initiate Stripe checkout.");
     } finally {
       setBusy(false);
     }
@@ -2006,7 +2057,41 @@ function FileNewWizardInner() {
               onSubmit={handleCheckoutPayment}
               className="border border-[#dcdcdc] p-5 grid lg:grid-cols-12 gap-6 items-start"
             >
-              <div className="lg:col-span-6 space-y-3 text-xs">
+              <div className="lg:col-span-6 space-y-4 text-xs">
+                {/* Stripe Hosted Checkout Banner */}
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-indigo-950 text-sm flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-indigo-700" />
+                      Stripe Express Checkout
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-indigo-700 leading-relaxed">
+                    Fast, 1-click checkout supporting Apple Pay, Google Pay, and all major cards
+                    powered securely by Stripe.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleStripeCheckoutRedirect}
+                    disabled={busy}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#635bff] hover:bg-[#5340eb] text-white text-xs font-bold rounded-md shadow-sm transition-all cursor-pointer"
+                  >
+                    <span>Pay ${quote.finalAmount.toFixed(2)} with Stripe</span>
+                    <ArrowRightCircle className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="relative flex py-1 items-center">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink mx-3 text-slate-400 text-[11px] uppercase font-semibold">
+                    Or pay with card below
+                  </span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
+
                 <div className="text-sm font-medium text-[#222]">Enter your card details:</div>
                 <label className="block space-y-1">
                   <span className="font-bold">
