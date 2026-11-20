@@ -12,6 +12,7 @@ import {
   Gauge,
   HelpCircle,
   PlusCircle,
+  RefreshCw,
   ShieldCheck,
   Truck,
 } from "lucide-react";
@@ -93,8 +94,30 @@ export default function DashboardPage() {
   );
 
   const [carryBusy, setCarryBusy] = useState(false);
+  const [checkingStatusId, setCheckingStatusId] = useState<string | null>(null);
   const [xmlFiling, setXmlFiling] = useState<ReturnFiling | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
+
+  async function handleSyncStatus(filingId: string) {
+    setCheckingStatusId(filingId);
+    setBanner(null);
+    try {
+      const res = await fetch(`/api/filings/${filingId}/sync-status`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        await refresh();
+        setBanner(`IRS Status updated: ${data.status}`);
+      } else {
+        setBanner(data.error || "Could not check IRS status");
+      }
+    } catch {
+      setBanner("Failed to connect to status check API");
+    } finally {
+      setCheckingStatusId(null);
+    }
+  }
 
   async function handleCarryForward() {
     if (!activeBiz) return;
@@ -289,6 +312,22 @@ export default function DashboardPage() {
                         >
                           {formatStatusLabel(f.status)}
                         </span>
+                        {(f.status === "TRANSMITTED_TO_IRS" || f.status === "QUEUED") && (
+                          <div className="mt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleSyncStatus(f.id)}
+                              disabled={checkingStatusId === f.id}
+                              className="inline-flex items-center gap-1 text-[11px] text-[#0073b7] hover:underline cursor-pointer font-medium"
+                              title="Check real-time status with IRS"
+                            >
+                              <RefreshCw
+                                className={`w-3 h-3 ${checkingStatusId === f.id ? "animate-spin" : ""}`}
+                              />
+                              {checkingStatusId === f.id ? "Checking..." : "Sync Status"}
+                            </button>
+                          </div>
+                        )}
                         {f.status === "EDITING_AFTER_REJECT" && f.rejectionCode && (
                           <div className="text-[11px] text-rose-700 mt-0.5 max-w-[200px]">
                             <strong>{f.rejectionCode}:</strong> {rej?.title || f.rejectionMessage}

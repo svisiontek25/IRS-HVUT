@@ -42,12 +42,31 @@ export async function GET(
     return NextResponse.json({ error: "Business not found" }, { status: 404 });
   }
 
+  // If a real IRS-stamped Schedule 1 PDF URL is recorded (from TaxBandits/IRS), stream it
+  if (filing.stampedPdfUrl) {
+    try {
+      const remoteRes = await fetch(filing.stampedPdfUrl);
+      if (remoteRes.ok) {
+        const buffer = await remoteRes.arrayBuffer();
+        return new NextResponse(Buffer.from(buffer), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="IRS-Stamped-Schedule1-${filing.id}.pdf"`,
+          },
+        });
+      }
+    } catch {
+      // Fallback to local high-fidelity watermarked generator if remote fetch fails
+    }
+  }
+
   const pdfBytes = await pdfGenerator.generateSchedule1Pdf(filing, business);
   return new NextResponse(Buffer.from(pdfBytes), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="Simulated-Schedule1-${filing.id}.pdf"`,
+      "Content-Disposition": `inline; filename="Schedule1-${filing.id}.pdf"`,
     },
   });
 }

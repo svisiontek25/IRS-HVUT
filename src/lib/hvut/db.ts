@@ -59,7 +59,7 @@ function ensureColumn(db: DatabaseSync, table: string, column: string, def: stri
   }
 }
 
-function getDb(): DatabaseSync {
+export function getDb(): DatabaseSync {
   if (dbInstance) return dbInstance;
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -249,6 +249,8 @@ function saveFilingInternal(db: DatabaseSync, filing: ReturnFiling) {
       priorYearSuspendedAllUnderLimit: filing.priorYearSuspendedAllUnderLimit,
       packageType: filing.packageType,
       additionalEmails: filing.additionalEmails,
+      stampedPdfUrl: filing.stampedPdfUrl,
+      submissionStatusDetails: filing.submissionStatusDetails,
       lines: filing.lines,
       serviceOrder: filing.serviceOrder,
       taxPayment: filing.taxPayment,
@@ -265,6 +267,8 @@ function rowToFiling(row: Record<string, unknown>): ReturnFiling {
     priorYearSuspendedAllUnderLimit?: boolean;
     packageType?: ReturnFiling["packageType"];
     additionalEmails?: string;
+    stampedPdfUrl?: string;
+    submissionStatusDetails?: string;
     lines?: ReturnFiling["lines"];
     serviceOrder?: ReturnFiling["serviceOrder"];
     taxPayment?: ReturnFiling["taxPayment"];
@@ -293,6 +297,8 @@ function rowToFiling(row: Record<string, unknown>): ReturnFiling {
     rejectionCode: row.rejection_code ? String(row.rejection_code) : undefined,
     rejectionMessage: row.rejection_message ? String(row.rejection_message) : undefined,
     pinSignature: row.pin_signature ? String(row.pin_signature) : undefined,
+    stampedPdfUrl: payload.stampedPdfUrl,
+    submissionStatusDetails: payload.submissionStatusDetails,
     totalTaxDue: Number(row.total_tax_due),
     totalCredits: Number(row.total_credits),
     netTaxDue: Number(row.net_tax_due),

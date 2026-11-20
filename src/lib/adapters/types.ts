@@ -178,6 +178,8 @@ export interface ReturnFiling {
   rejectionCode?: string;
   rejectionMessage?: string;
   pinSignature?: string;
+  stampedPdfUrl?: string;
+  submissionStatusDetails?: string;
   totalTaxDue: number;
   totalCredits: number;
   netTaxDue: number;

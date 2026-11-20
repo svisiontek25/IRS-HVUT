@@ -1,4 +1,5 @@
 import { SimulatedMefAdapter } from "../adapters/mef-simulator";
+import { TaxBanditsAdapter } from "../adapters/taxbandits-adapter";
 import { MockCheckoutAdapter } from "../adapters/payment-simulator";
 import { MockWatermarkedPdfAdapter } from "../adapters/pdf-generator";
 import {
@@ -130,9 +131,10 @@ export async function checkoutAndTransmitFiling(params: {
     }
   }
 
-  // 2. Transmit to Simulated IRS MeF Gateway
+  // 2. Transmit to IRS Gateway (TaxBandits if configured, else MeF Simulator)
   const config = getSimulatorConfig();
-  const mef = new SimulatedMefAdapter(config);
+  const taxBandits = new TaxBanditsAdapter();
+  const mef = taxBandits.isConfigured() ? taxBandits : new SimulatedMefAdapter(config);
   const existingAcceptedVins = getAcceptedVinsForBusinessTaxYear(
     business.id,
     filing.taxYear,
@@ -167,9 +169,8 @@ export async function checkoutAndTransmitFiling(params: {
     action: `MEF_TRANSMIT_${result.status}`,
     entityType: "ReturnFiling",
     entityId: filing.id,
-    details: `Mode=${config.mode}, SubmissionId=${result.irsSubmissionId}${
-      result.rejectionCode ? `, Code=${result.rejectionCode}` : ""
-    }`,
+    details: `Mode=${config.mode}, SubmissionId=${result.irsSubmissionId}${result.rejectionCode ? `, Code=${result.rejectionCode}` : ""
+      }`,
   });
 
   return { ok: true as const, filing };
