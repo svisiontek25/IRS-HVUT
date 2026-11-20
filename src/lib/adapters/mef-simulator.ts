@@ -84,6 +84,23 @@ export function buildSimulatedMefXml(
       <TotalCreditsAmt>${filing.totalCredits.toFixed(2)}</TotalCreditsAmt>
       <NetTaxDueAmt>${filing.netTaxDue.toFixed(2)}</NetTaxDueAmt>
       <PaymentMethod>${escapeXml(filing.taxPayment?.method ?? "CHECK")}</PaymentMethod>
+      ${
+        filing.taxPayment?.method === "EFW"
+          ? `<PaymentRecord>
+        <RoutingTransitNumber>${escapeXml(
+          filing.taxPayment.bankRoutingNumber || filing.taxPayment.bankRoutingLast4 || "",
+        )}</RoutingTransitNumber>
+        <BankAccountNumber>${escapeXml(
+          filing.taxPayment.bankAccountNumber || filing.taxPayment.bankAccountLast4 || "",
+        )}</BankAccountNumber>
+        <AccountTypeCd>${escapeXml(filing.taxPayment.accountType || "CHECKING")}</AccountTypeCd>
+        <PaymentAmount>${filing.netTaxDue.toFixed(2)}</PaymentAmount>
+        <RequestedPaymentDate>${escapeXml(
+          filing.taxPayment.debitDate || new Date().toISOString().split("T")[0],
+        )}</RequestedPaymentDate>
+      </PaymentRecord>`
+          : ""
+      }
       <Schedule1Vehicles>
 ${vehicleLinesXml}
       </Schedule1Vehicles>

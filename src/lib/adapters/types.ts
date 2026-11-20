@@ -150,10 +150,13 @@ export interface TaxPaymentInstruction {
   id: string;
   filingId: string;
   method: IrsPaymentMethod;
+  bankRoutingNumber?: string;
+  bankAccountNumber?: string;
   bankRoutingLast4?: string;
   bankAccountLast4?: string;
   accountType?: "CHECKING" | "SAVINGS";
   debitDate?: string;
+  efwConsentAgreed?: boolean;
 }
 
 export interface ReturnFiling {

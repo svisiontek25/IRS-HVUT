@@ -14,6 +14,7 @@ import {
   CreditCard,
   Download,
   Edit,
+  ExternalLink,
   FileCheck2,
   FileSpreadsheet,
   FileText,
@@ -26,6 +27,7 @@ import {
   Printer,
   Search,
   ShoppingCart,
+  ShieldCheck,
   Sparkles,
   Trash2,
   Truck,
@@ -52,7 +54,7 @@ import {
   getFilingDeadline,
   getMonthName,
 } from "@/lib/hvut/tax-engine";
-import { generateValidTestVin, validateVin } from "@/lib/hvut/vin-validator";
+import { generateValidTestVin, validateAbaRouting, validateVin } from "@/lib/hvut/vin-validator";
 
 const WIZARD_STEPS = [
   { id: 1, label: "Get Started" },
@@ -221,10 +223,12 @@ function FileNewWizardInner() {
 
   // Step 4: IRS Options
   const [taxMethod, setTaxMethod] = useState<IrsPaymentMethod>("EFW");
-  const [routingLast4, setRoutingLast4] = useState("1024");
-  const [accountLast4, setAccountLast4] = useState("8891");
+  const [routingNumber, setRoutingNumber] = useState("122000496");
+  const [accountNumber, setAccountNumber] = useState("1234567890");
+  const [confirmAccountNumber, setConfirmAccountNumber] = useState("1234567890");
   const [accountType, setAccountType] = useState<"CHECKING" | "SAVINGS">("CHECKING");
   const [debitDate, setDebitDate] = useState("2026-08-31");
+  const [efwConsent, setEfwConsent] = useState(true);
 
   // Step 5: Pricing
   const [packageType, setPackageType] = useState<PackageType>("PER_VEHICLE");
@@ -273,10 +277,18 @@ function FileNewWizardInner() {
     if (found.additionalEmails) setAdditionalEmails(found.additionalEmails);
     if (found.taxPayment) {
       setTaxMethod(found.taxPayment.method);
-      if (found.taxPayment.bankRoutingLast4) setRoutingLast4(found.taxPayment.bankRoutingLast4);
-      if (found.taxPayment.bankAccountLast4) setAccountLast4(found.taxPayment.bankAccountLast4);
+      if (found.taxPayment.bankRoutingNumber) setRoutingNumber(found.taxPayment.bankRoutingNumber);
+      else if (found.taxPayment.bankRoutingLast4) setRoutingNumber(found.taxPayment.bankRoutingLast4);
+      if (found.taxPayment.bankAccountNumber) {
+        setAccountNumber(found.taxPayment.bankAccountNumber);
+        setConfirmAccountNumber(found.taxPayment.bankAccountNumber);
+      } else if (found.taxPayment.bankAccountLast4) {
+        setAccountNumber(found.taxPayment.bankAccountLast4);
+        setConfirmAccountNumber(found.taxPayment.bankAccountLast4);
+      }
       if (found.taxPayment.accountType) setAccountType(found.taxPayment.accountType);
       if (found.taxPayment.debitDate) setDebitDate(found.taxPayment.debitDate);
+      if (found.taxPayment.efwConsentAgreed !== undefined) setEfwConsent(found.taxPayment.efwConsentAgreed);
     }
     if (found.serviceOrder) {
       setAddOnFax(found.serviceOrder.addOnFax);
@@ -687,10 +699,13 @@ function FileNewWizardInner() {
           id: savedFiling?.taxPayment?.id || `TP-${Date.now()}`,
           filingId: editingId || "NEW",
           method: taxMethod,
-          bankRoutingLast4: taxMethod === "EFW" ? routingLast4 : undefined,
-          bankAccountLast4: taxMethod === "EFW" ? accountLast4 : undefined,
+          bankRoutingNumber: taxMethod === "EFW" ? routingNumber : undefined,
+          bankAccountNumber: taxMethod === "EFW" ? accountNumber : undefined,
+          bankRoutingLast4: taxMethod === "EFW" ? routingNumber.slice(-4) : undefined,
+          bankAccountLast4: taxMethod === "EFW" ? accountNumber.slice(-4) : undefined,
           accountType: taxMethod === "EFW" ? accountType : undefined,
           debitDate: taxMethod === "EFW" ? debitDate : undefined,
+          efwConsentAgreed: taxMethod === "EFW" ? efwConsent : undefined,
         },
         serviceOrder: savedFiling?.serviceOrder,
         irsSubmissionId: savedFiling?.irsSubmissionId,
@@ -747,10 +762,13 @@ function FileNewWizardInner() {
             id: f.taxPayment?.id || `TP-${Date.now()}`,
             filingId: f.id,
             method: taxMethod,
-            bankRoutingLast4: taxMethod === "EFW" ? routingLast4 : undefined,
-            bankAccountLast4: taxMethod === "EFW" ? accountLast4 : undefined,
+            bankRoutingNumber: taxMethod === "EFW" ? routingNumber : undefined,
+            bankAccountNumber: taxMethod === "EFW" ? accountNumber : undefined,
+            bankRoutingLast4: taxMethod === "EFW" ? routingNumber.slice(-4) : undefined,
+            bankAccountLast4: taxMethod === "EFW" ? accountNumber.slice(-4) : undefined,
             accountType: taxMethod === "EFW" ? accountType : undefined,
             debitDate: taxMethod === "EFW" ? debitDate : undefined,
+            efwConsentAgreed: taxMethod === "EFW" ? efwConsent : undefined,
           },
         }),
       });
@@ -847,9 +865,25 @@ function FileNewWizardInner() {
       setBannerError("Please add or import at least 1 vehicle before clicking Next.");
       return;
     }
-    if (step === 4 && taxMethod === "EFW" && (routingLast4.length < 4 || accountLast4.length < 4)) {
-      setBannerError("Please enter routing and account last-4 digits for EFW.");
-      return;
+    if (step === 4 && taxMethod === "EFW") {
+      if (!validateAbaRouting(routingNumber).valid) {
+        setBannerError("Please enter a valid 9-digit ABA bank routing number.");
+        return;
+      }
+      if (!accountNumber || accountNumber.length < 4) {
+        setBannerError("Please enter a valid bank account number.");
+        return;
+      }
+      if (accountNumber !== confirmAccountNumber) {
+        setBannerError("Bank account numbers do not match.");
+        return;
+      }
+      if (!efwConsent) {
+        setBannerError(
+          "You must agree to the IRS EFW authorization consent to proceed with direct debit.",
+        );
+        return;
+      }
     }
     setStep((s) => Math.min(8, s + 1));
   }
@@ -925,39 +959,39 @@ function FileNewWizardInner() {
   }> =
     formType === "2290_VIN_CORR"
       ? [
-          {
-            id: "VIN_CORRECTION",
-            label: "VIN Correction",
-            count: lines.filter((l) => l.lineType === "VIN_CORRECTION").length,
-          },
-        ]
+        {
+          id: "VIN_CORRECTION",
+          label: "VIN Correction",
+          count: lines.filter((l) => l.lineType === "VIN_CORRECTION").length,
+        },
+      ]
       : [
-          {
-            id: "TAXABLE",
-            label: "Taxable Vehicles",
-            count: lines.filter((l) => l.lineType === "TAXABLE").length,
-          },
-          {
-            id: "SUSPENDED",
-            label: "Suspended Vehicles",
-            count: lines.filter((l) => l.lineType === "SUSPENDED").length,
-          },
-          {
-            id: "PRIOR_YEAR_SUSPENDED",
-            label: "Prior Year Suspended Vehicles",
-            count: lines.filter((l) => l.lineType === "PRIOR_YEAR_SUSPENDED").length,
-          },
-          {
-            id: "CREDIT",
-            label: "Sold or Destroyed Credits",
-            count: lines.filter((l) => l.lineType === "CREDIT" || l.lineType === "CREDIT_OVERPAID").length,
-          },
-          {
-            id: "CREDIT_LOW_MILEAGE",
-            label: "Low Mileage Credits",
-            count: lines.filter((l) => l.lineType === "CREDIT_LOW_MILEAGE").length,
-          },
-        ];
+        {
+          id: "TAXABLE",
+          label: "Taxable Vehicles",
+          count: lines.filter((l) => l.lineType === "TAXABLE").length,
+        },
+        {
+          id: "SUSPENDED",
+          label: "Suspended Vehicles",
+          count: lines.filter((l) => l.lineType === "SUSPENDED").length,
+        },
+        {
+          id: "PRIOR_YEAR_SUSPENDED",
+          label: "Prior Year Suspended Vehicles",
+          count: lines.filter((l) => l.lineType === "PRIOR_YEAR_SUSPENDED").length,
+        },
+        {
+          id: "CREDIT",
+          label: "Sold or Destroyed Credits",
+          count: lines.filter((l) => l.lineType === "CREDIT" || l.lineType === "CREDIT_OVERPAID").length,
+        },
+        {
+          id: "CREDIT_LOW_MILEAGE",
+          label: "Low Mileage Credits",
+          count: lines.filter((l) => l.lineType === "CREDIT_LOW_MILEAGE").length,
+        },
+      ];
 
   return (
     <div className="space-y-4">
@@ -1018,13 +1052,12 @@ function FileNewWizardInner() {
                   disabled={!canClick}
                   onClick={() => canClick && setStep(st.id)}
                   style={{ clipPath }}
-                  className={`flex-1 py-2.5 px-4 text-xs text-center transition -ml-2 first:ml-0 ${
-                    isCurrent
+                  className={`flex-1 py-2.5 px-4 text-xs text-center transition -ml-2 first:ml-0 ${isCurrent
                       ? "bg-[#0073b7] text-white font-bold z-10 cursor-pointer"
                       : isDone
                         ? "bg-[#0284c7] text-white font-medium hover:bg-[#0369a1] cursor-pointer"
                         : "bg-[#e9ecef] text-[#444444] font-normal cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   {st.label}
                 </button>
@@ -1107,11 +1140,10 @@ function FileNewWizardInner() {
                           else if (opt.value === "8849_SCH6") setActiveVehicleTab("CREDIT");
                           else setActiveVehicleTab("TAXABLE");
                         }}
-                        className={`p-4 border text-center rounded-[2px] transition cursor-pointer flex flex-col items-center justify-between space-y-2 ${
-                          selected
+                        className={`p-4 border text-center rounded-[2px] transition cursor-pointer flex flex-col items-center justify-between space-y-2 ${selected
                             ? "bg-[#dbeafe] border-[#1e40af] ring-1 ring-[#1e40af]"
                             : "bg-white border-[#cccccc] hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         <div className="font-semibold text-sm text-[#222]">{opt.title}</div>
                         <div
@@ -1365,11 +1397,10 @@ function FileNewWizardInner() {
                   key={tb.id}
                   type="button"
                   onClick={() => setActiveVehicleTab(tb.id)}
-                  className={`py-2.5 px-3 text-xs font-semibold rounded-[2px] transition cursor-pointer ${
-                    activeVehicleTab === tb.id
+                  className={`py-2.5 px-3 text-xs font-semibold rounded-[2px] transition cursor-pointer ${activeVehicleTab === tb.id
                       ? "bg-[#1e40af] text-white shadow-xs ring-2 ring-[#0073b7]"
                       : "bg-[#1d4ed8] hover:bg-[#1e40af] text-white opacity-85"
-                  }`}
+                    }`}
                 >
                   {tb.label} ({tb.count})
                 </button>
@@ -1599,45 +1630,179 @@ function FileNewWizardInner() {
                 ))}
 
                 {taxMethod === "EFW" && (
-                  <div className="mt-3 p-4 border border-[#cccccc] bg-[#f8f9fa] grid sm:grid-cols-4 gap-3">
-                    <label className="block space-y-1">
-                      <span className="font-bold">Routing Last 4</span>
+                  <div className="mt-3 p-4 border border-[#0073b7] bg-[#f0f7fc] rounded-lg space-y-4">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[#0073b7]">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Direct Electronic Funds Withdrawal (ACH Direct Debit)</span>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                      <label className="block space-y-1">
+                        <span className="font-bold text-slate-800">
+                          ABA Routing Number (9 Digits) <span className="text-rose-600">*</span>
+                        </span>
+                        <input
+                          maxLength={9}
+                          placeholder="e.g. 122000496"
+                          value={routingNumber}
+                          onChange={(e) => setRoutingNumber(e.target.value.replace(/\D/g, ""))}
+                          className={`w-full border px-2.5 py-2 font-mono rounded bg-white ${routingNumber.length === 9
+                              ? validateAbaRouting(routingNumber).valid
+                                ? "border-emerald-500 focus:ring-emerald-500"
+                                : "border-rose-500 focus:ring-rose-500"
+                              : "border-[#cccccc]"
+                            }`}
+                        />
+                        {routingNumber.length === 9 && (
+                          <p
+                            className={`text-[10px] ${validateAbaRouting(routingNumber).valid
+                                ? "text-emerald-700 font-medium"
+                                : "text-rose-600 font-medium"
+                              }`}
+                          >
+                            {validateAbaRouting(routingNumber).valid
+                              ? "✓ Valid Routing Number"
+                              : "✗ Invalid ABA Checksum"}
+                          </p>
+                        )}
+                      </label>
+
+                      <label className="block space-y-1">
+                        <span className="font-bold text-slate-800">
+                          Account Number <span className="text-rose-600">*</span>
+                        </span>
+                        <input
+                          maxLength={17}
+                          placeholder="Bank account number"
+                          value={accountNumber}
+                          onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+                          className="w-full border border-[#cccccc] bg-white px-2.5 py-2 font-mono rounded"
+                        />
+                      </label>
+
+                      <label className="block space-y-1">
+                        <span className="font-bold text-slate-800">
+                          Confirm Account Number <span className="text-rose-600">*</span>
+                        </span>
+                        <input
+                          maxLength={17}
+                          placeholder="Re-enter account number"
+                          value={confirmAccountNumber}
+                          onChange={(e) =>
+                            setConfirmAccountNumber(e.target.value.replace(/\D/g, ""))
+                          }
+                          className={`w-full border px-2.5 py-2 font-mono rounded bg-white ${confirmAccountNumber && confirmAccountNumber !== accountNumber
+                              ? "border-rose-500"
+                              : "border-[#cccccc]"
+                            }`}
+                        />
+                        {confirmAccountNumber && confirmAccountNumber !== accountNumber && (
+                          <p className="text-[10px] text-rose-600 font-medium">
+                            Account numbers do not match
+                          </p>
+                        )}
+                      </label>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <label className="block space-y-1">
+                          <span className="font-bold text-slate-800">Account Type</span>
+                          <select
+                            value={accountType}
+                            onChange={(e) =>
+                              setAccountType(e.target.value as "CHECKING" | "SAVINGS")
+                            }
+                            className="w-full border border-[#cccccc] bg-white px-2.5 py-2 rounded text-xs"
+                          >
+                            <option value="CHECKING">Checking</option>
+                            <option value="SAVINGS">Savings</option>
+                          </select>
+                        </label>
+
+                        <label className="block space-y-1">
+                          <span className="font-bold text-slate-800">Debit Date</span>
+                          <input
+                            type="date"
+                            value={debitDate}
+                            onChange={(e) => setDebitDate(e.target.value)}
+                            className="w-full border border-[#cccccc] bg-white px-2 py-2 rounded text-xs"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <label className="flex items-start gap-2 pt-2 border-t border-slate-200 cursor-pointer">
                       <input
-                        maxLength={4}
-                        value={routingLast4}
-                        onChange={(e) => setRoutingLast4(e.target.value.replace(/\D/g, ""))}
-                        className="w-full border border-[#cccccc] bg-white px-2.5 py-1.5 font-mono"
+                        type="checkbox"
+                        checked={efwConsent}
+                        onChange={(e) => setEfwConsent(e.target.checked)}
+                        className="mt-0.5 accent-[#0073b7]"
                       />
+                      <span className="text-[11px] text-slate-600 leading-relaxed">
+                        <strong>IRS EFW Consent:</strong> I authorize the U.S. Treasury and its
+                        designated Financial Agent to initiate an ACH electronic funds withdrawal
+                        (direct debit) entry to the bank account indicated above for payment of my
+                        federal taxes owed on Form 2290.
+                      </span>
                     </label>
-                    <label className="block space-y-1">
-                      <span className="font-bold">Account Last 4</span>
-                      <input
-                        maxLength={4}
-                        value={accountLast4}
-                        onChange={(e) => setAccountLast4(e.target.value.replace(/\D/g, ""))}
-                        className="w-full border border-[#cccccc] bg-white px-2.5 py-1.5 font-mono"
-                      />
-                    </label>
-                    <label className="block space-y-1">
-                      <span className="font-bold">Account Type</span>
-                      <select
-                        value={accountType}
-                        onChange={(e) => setAccountType(e.target.value as "CHECKING" | "SAVINGS")}
-                        className="w-full border border-[#cccccc] bg-white px-2.5 py-1.5"
+                  </div>
+                )}
+
+                {taxMethod === "EFTPS" && (
+                  <div className="mt-3 p-4 border border-blue-200 bg-blue-50/70 rounded-lg space-y-2 text-xs">
+                    <div className="font-semibold text-blue-900 flex items-center justify-between">
+                      <span>Electronic Federal Tax Payment System (EFTPS)</span>
+                      <a
+                        href="https://www.eftps.gov"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0073b7] hover:underline"
                       >
-                        <option value="CHECKING">Checking</option>
-                        <option value="SAVINGS">Savings</option>
-                      </select>
-                    </label>
-                    <label className="block space-y-1">
-                      <span className="font-bold">Debit Date</span>
-                      <input
-                        type="date"
-                        value={debitDate}
-                        onChange={(e) => setDebitDate(e.target.value)}
-                        className="w-full border border-[#cccccc] bg-white px-2.5 py-1.5"
-                      />
-                    </label>
+                        Visit EFTPS.gov <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      You have selected to pay via EFTPS. <strong>Note:</strong> Payment will not be
+                      debited automatically by this software. You must log into your existing account
+                      at <strong>www.eftps.gov</strong> and schedule your payment at least one
+                      business day before the due date (by 8:00 PM Eastern).
+                    </p>
+                  </div>
+                )}
+
+                {taxMethod === "CARD" && (
+                  <div className="mt-3 p-4 border border-purple-200 bg-purple-50/70 rounded-lg space-y-2 text-xs">
+                    <div className="font-semibold text-purple-900 flex items-center justify-between">
+                      <span>Pay by Credit / Debit Card (IRS Authorized Processors)</span>
+                      <a
+                        href="https://www.irs.gov/payments/pay-your-taxes-by-debit-or-credit-card"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:underline"
+                      >
+                        IRS.gov Card Payment Portal <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Federal regulations require all tax card payments to go through IRS-authorized
+                      third-party card processors (ACI Payments, PayUSATax, or Pay1040). Card
+                      processors charge a standard ~1.87% convenience fee. Form 2290 card payments
+                      are limited to 2 payments per tax period.
+                    </p>
+                  </div>
+                )}
+
+                {taxMethod === "CHECK" && (
+                  <div className="mt-3 p-4 border border-amber-200 bg-amber-50/70 rounded-lg space-y-2 text-xs">
+                    <div className="font-semibold text-amber-900">
+                      <span>Pay by Check or Money Order with Form 2290-V</span>
+                    </div>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Upon submission, your official <strong>Form 2290-V Payment Voucher</strong>{" "}
+                      will be generated automatically. Make your check payable to{" "}
+                      <strong>&quot;United States Treasury&quot;</strong>, write your EIN, &quot;2026
+                      Form 2290&quot;, and your daytime phone number on the check, and mail it with
+                      the voucher. Do not staple the check to the voucher.
+                    </p>
                   </div>
                 )}
               </div>
@@ -2195,9 +2360,8 @@ function FileNewWizardInner() {
                 </div>
                 <div className="border border-[#dcdcdc] p-5 bg-white space-y-2">
                   <FileText
-                    className={`w-10 h-10 mx-auto ${
-                      savedFiling.status === "ACCEPTED" ? "text-[#d93025]" : "text-[#777]"
-                    }`}
+                    className={`w-10 h-10 mx-auto ${savedFiling.status === "ACCEPTED" ? "text-[#d93025]" : "text-[#777]"
+                      }`}
                   />
                   <div className="text-xs font-bold text-[#222]">
                     {savedFiling.status === "ACCEPTED" ? "Sch-1 Receipt Ready" : "Sch-1 in Progress"}
@@ -2463,8 +2627,8 @@ function FileNewWizardInner() {
                         const trimmed = nextUnit.trim().toLowerCase();
                         const byUnit = trimmed
                           ? priorBusinessVehicles.find(
-                              (v) => v.unitNumber?.trim().toLowerCase() === trimmed,
-                            )
+                            (v) => v.unitNumber?.trim().toLowerCase() === trimmed,
+                          )
                           : undefined;
                         if (byUnit) {
                           return {

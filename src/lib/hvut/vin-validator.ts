@@ -100,3 +100,18 @@ export function validateEin(rawEin: string): { valid: boolean; formatted: string
   };
 }
 
+export function validateAbaRouting(rawRouting: string): { valid: boolean; error?: string } {
+  const digits = rawRouting.replace(/\D/g, "");
+  if (digits.length !== 9) {
+    return { valid: false, error: "ABA Routing number must be exactly 9 digits." };
+  }
+  const d = digits.split("").map(Number);
+  const checksum =
+    (3 * (d[0] + d[3] + d[6]) + 7 * (d[1] + d[4] + d[7]) + 1 * (d[2] + d[5] + d[8])) % 10;
+  if (checksum !== 0) {
+    return { valid: false, error: "Invalid ABA routing number checksum." };
+  }
+  return { valid: true };
+}
+
+

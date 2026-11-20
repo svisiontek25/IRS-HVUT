@@ -171,8 +171,14 @@ export class TaxBanditsAdapter implements IMefTransmitter {
         PaymentDetails:
           filing.taxPayment?.method === "EFW"
             ? {
-                RoutingNumber: filing.taxPayment.bankRoutingLast4 || "122000496",
-                AccountNumber: filing.taxPayment.bankAccountLast4 || "123456789",
+                RoutingNumber:
+                  filing.taxPayment.bankRoutingNumber ||
+                  filing.taxPayment.bankRoutingLast4 ||
+                  "122000496",
+                AccountNumber:
+                  filing.taxPayment.bankAccountNumber ||
+                  filing.taxPayment.bankAccountLast4 ||
+                  "123456789",
                 AccountType: filing.taxPayment.accountType || "CHECKING",
                 PaymentAmount: filing.netTaxDue,
               }
