@@ -26,9 +26,8 @@ export function IrsHvutLogo({ compact = false }: { compact?: boolean }) {
     <div className="inline-flex items-center gap-2.5 select-none">
       {/* Modern Indigo-Blue & Amber Highway Semi-Truck Badge SVG */}
       <div
-        className={`rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#2563eb] flex items-center justify-center shadow-xs border border-indigo-400/20 ${
-          compact ? "w-10 h-10" : "w-12 h-12"
-        }`}
+        className={`rounded-xl bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#2563eb] flex items-center justify-center shadow-xs border border-indigo-400/20 ${compact ? "w-10 h-10" : "w-12 h-12"
+          }`}
       >
         <svg
           viewBox="0 0 64 48"
@@ -61,9 +60,8 @@ export function IrsHvutLogo({ compact = false }: { compact?: boolean }) {
       <div className="leading-tight">
         <div className="flex items-center gap-1.5">
           <span
-            className={`font-extrabold tracking-tight text-[#0f172a] ${
-              compact ? "text-lg" : "text-[22px]"
-            }`}
+            className={`font-extrabold tracking-tight text-[#0f172a] ${compact ? "text-lg" : "text-[22px]"
+              }`}
           >
             IRS<span className="text-[#1e40af]">-HVUT</span>
           </span>
@@ -87,7 +85,7 @@ const PUBLIC_NAV = [
   { href: "/tax-calculator", label: "Tax Calculator", icon: Calculator },
 ];
 
-const PUBLIC_ROUTES = ["/", "/login", "/register", "/tax-calculator"];
+const PUBLIC_ROUTES = ["/", "/login", "/register", "/tax-calculator", "/user-guide"];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -224,11 +222,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex flex-col items-center justify-center px-4 py-1.5 rounded-md transition ${
-                      active
+                    className={`flex flex-col items-center justify-center px-4 py-1.5 rounded-md transition ${active
                         ? "bg-indigo-50 text-[#1e40af] font-bold"
                         : "text-slate-600 hover:text-[#1e40af] hover:bg-slate-50"
-                    }`}
+                      }`}
                   >
                     <Icon className="w-5 h-5 mb-0.5" />
                     <span className="text-[12px] whitespace-nowrap">{item.label}</span>
@@ -332,9 +329,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${
-                    active ? "bg-[#1e40af] text-white" : "text-slate-700 bg-slate-100"
-                  }`}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium whitespace-nowrap ${active ? "bg-[#1e40af] text-white" : "text-slate-700 bg-slate-100"
+                    }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {item.label}
