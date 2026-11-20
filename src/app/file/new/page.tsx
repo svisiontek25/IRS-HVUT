@@ -311,12 +311,16 @@ function FileNewWizardInner() {
   }, [editFilingId, filings, setActiveBusinessId]);
 
   const stripeSessionId = searchParams.get("stripe_session_id");
+  const paramStep = searchParams.get("step");
   useEffect(() => {
     if (stripeSessionId) {
       setBannerError(null);
       setStep(7);
+    } else if (paramStep) {
+      const s = parseInt(paramStep, 10);
+      if (s >= 1 && s <= 8) setStep(s);
     }
-  }, [stripeSessionId]);
+  }, [stripeSessionId, paramStep]);
 
   useEffect(() => {
     if (editFilingId) return;

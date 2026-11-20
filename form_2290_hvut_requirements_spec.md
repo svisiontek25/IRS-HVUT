@@ -1,7 +1,7 @@
 # Software Requirements Specification (SRS): IRS Form 2290 (HVUT) Online E-Filing Platform
 
-**Reference Benchmark:** [TruckDues.com HVUT Service](https://www.truckdues.com/hvut/)  
-**Document Status:** Draft v1.0  
+**Platform Identity:** IRS-HVUT v1.1 Commercial E-Filing Platform  
+**Document Status:** Production Specification v1.1  
 **Date:** November 10, 2026
 
 ---
@@ -9,10 +9,10 @@
 ## 1. Executive Summary & Product Vision
 
 ### 1.1 Purpose
-This document defines the functional, regulatory, architectural, and non-functional requirements to build an online **IRS Form 2290 (Heavy Highway Vehicle Use Tax – HVUT)** e-filing platform modeled after **TruckDues.com**. The platform enables owner-operators, fleet managers, and tax professionals (CPAs) to prepare, validate, pay for, and electronically transmit Form 2290 returns and related filings directly to the IRS Modernized e-File (MeF) system, delivering the IRS-watermarked **Schedule 1** within minutes of acceptance.
+This document defines the functional, regulatory, architectural, and non-functional requirements to build an online **IRS Form 2290 (Heavy Highway Vehicle Use Tax – HVUT)** e-filing platform. The platform enables owner-operators, fleet managers, and tax professionals (CPAs) to prepare, validate, pay for, and electronically transmit Form 2290 returns and related filings directly to the IRS Modernized e-File (MeF) system, delivering the IRS-watermarked **Schedule 1** within minutes of acceptance.
 
-### 1.2 Core Value Propositions (Benchmark Analysis)
-Based on the TruckDues.com service model, the platform differentiates through:
+### 1.2 Core Value Propositions
+The IRS-HVUT platform differentiates through:
 - **Zero Upfront Friction ("Prepare Free, Pay to File"):** Users can create an account, enter business/vehicle data, and calculate taxes before paying platform service fees at final submission.
 - **Rapid Schedule 1 Delivery:** Automated MeF transmission and instant delivery of the digitally watermarked IRS Schedule 1 via dashboard download, email, and optional SMS/fax.
 - **Transparent Tiered Pricing:** Vehicle-count-based pricing for single trucks, mid-size fleets, and unlimited-vehicle/unlimited-return enterprise plans, plus free VIN corrections for returns originally filed on the platform.
@@ -103,7 +103,7 @@ A step-by-step, auto-saving draft workflow:
 Payments must be strictly separated in UI copy and financial processing into **Stream A (Platform Service Fees)** and **Stream B (IRS Tax Dues)**:
 
 #### Stream A: Platform Service Fees (Paid to Platform)
-- **REQ-PAY-001 (Tiered Pricing Model):** Configurable pricing engine modeled on TruckDues' vehicle tiers:
+- **REQ-PAY-001 (Tiered Pricing Model):** Configurable pricing engine based on vehicle tiers:
   - Single-return tiers by vehicle count (e.g., 1, 2, 3, 4, 5, 6–25, 26–100, and Unlimited Vehicles in Single Return).
   - Multi-return package (e.g., Unlimited Vehicles & Unlimited Returns for a single business/tax year).
   - Flat service fees for 2290 Amendments, Form 8849 Schedule 6 Claims, and non-native VIN Corrections.
@@ -205,6 +205,6 @@ Payments must be strictly separated in UI copy and financial processing into **S
 ## 9. Key Open Decisions for Stakeholder Alignment
 
 1. **IRS Transmitter vs. Aggregator Strategy:** Will your engineering team obtain your own IRS EFIN/ETIN/Software ID and build the MeF SOAP/XML client directly (longer lead time due to IRS ATS testing), or integrate initially with an existing IRS-authorized MeF transmitter API?
-2. **Pricing Strategy:** Will you match TruckDues' vehicle tiers (starting around \$7.99 for 1 truck up to \$199.99 unlimited) or introduce subscription/fleet-management bundles?
+2. **Pricing Strategy:** Vehicle tiers starting at $7.99 for 1 truck up to $199.99 unlimited annual subscription.
 3. **Mobile App Technology:** Build a responsive PWA + React Native / Flutter mobile app for iOS/Android in Phase 2–3, or launch mobile apps concurrently with the web MVP?
-4. **Support Channels:** TruckDues emphasizes phone, email, and chat support during filing season—will you staff live US-based phone support during July–August peak hours?
+4. **Support Channels:** Live support channels (phone, email, and chat support) during July–August peak filing hours.

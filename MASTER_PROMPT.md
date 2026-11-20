@@ -1,16 +1,16 @@
-# MASTER PROMPT — TruckDues.com-Style IRS Form 2290 (HVUT) E-Filing Platform v1.1
+# MASTER PROMPT — IRS-HVUT v1.1 Form 2290 E-Filing Platform
 
 ## Objective
-Build a full-stack Next.js (App Router, TypeScript, Tailwind CSS, `node:sqlite`, `pdf-lib`, `papaparse`) web application in `d:\Local Disk D\truckdues\IRS HVUT-1.1` that replicates the complete **TruckDues.com Form 2290 User Guide workflow** (`https://www.truckdues.com/2290-user-guide-2290/`) and generates **pixel-accurate official IRS (Rev. July 2026) PDFs** using the templates in `REFERANCE DOCUMENTS/`, while preserving the local IRS MeF Simulator & Ports-and-Adapters architecture from `D:\Local Disk D\truckdues\IRS HVUT\IRS HVUT`.
+Build a full-stack Next.js (App Router, TypeScript, Tailwind CSS, `node:sqlite`, `pdf-lib`, `papaparse`) web application in `IRS HVUT-1.1` that implements the complete **Form 2290 User Guide workflow** and generates **pixel-accurate official IRS (Rev. July 2026) PDFs** using the templates in `REFERANCE DOCUMENTS/`, while preserving the local IRS MeF Simulator & Ports-and-Adapters architecture.
 
 ---
 
-## 1. Visual Identity, Header & Navigation (TruckDues Benchmark)
+## 1. Visual Identity, Header & Navigation
 1. **Top Utility Bar:**
-   - Left: Phone `(347) 515 - 2290` | Email `support@truckdues.com` | Live Simulator Mode pill (`AUTO_ACCEPT`, `MANUAL_REVIEW`, `AUTO_REJECT`, `GATEWAY_OUTAGE`).
+   - Left: Support contact information | Live Simulator Mode pill (`AUTO_ACCEPT`, `MANUAL_REVIEW`, `AUTO_REJECT`, `GATEWAY_OUTAGE`).
    - Right: Links to `2290 User Guide` (`/user-guide`), `Tax Calculator` (`/`), `Simulator Console` (`/admin`), `Sandbox Inbox` drawer badge, and **Persona / Account Switcher**.
 2. **Main Brand Header:**
-   - TruckDues-inspired green/teal & navy branding (`TruckDues 2290 — simplifies 2290 tax filings`).
+   - IRS-HVUT federal blue & navy branding (`IRS-HVUT 2290 — simplifies 2290 tax filings`).
    - Primary Navigation: `Home / Dashboard` (`/dashboard`), `File a Return` (`/file/new`), `Add Business` (`/businesses/new`), `Tax Calculator` (`/`), `2290 User Guide` (`/user-guide`), `Register / Login` (`/register`, `/login`), `Simulator Console` (`/admin`).
 
 ---
@@ -46,8 +46,8 @@ Implement `/businesses/new` matching `REFERANCE DOCUMENTS/BUSINESS_INFO.jpeg`:
 
 ---
 
-## 4. Unified 8-Step Chevron Filing Wizard (`/file/new` — TruckDues 2290 User Guide)
-Implement the exact 8-step horizontal chevron progress bar from `https://www.truckdues.com/2290-user-guide-2290/`:
+## 4. Unified 8-Step Chevron Filing Wizard (`/file/new`)
+Implement the 8-step horizontal chevron progress bar:
 `Get Started` -> `Tax Options` -> `Vehicle Info` -> `IRS Options` -> `Pricing` -> `Checkout` -> `Form Summary` -> `Submit Return`
 Display the active business name and EIN (`BUSINESS NAME (XX-XXXXXXX)`) in the top-right corner of the wizard header.
 
@@ -59,7 +59,7 @@ Display the active business name and EIN (`BUSINESS NAME (XX-XXXXXXX)`) in the t
   3. **VIN Correction** (*"Correct your mistakenly reported VIN# here"*)
   4. **2290 Claim** (*"Prepare refund claim on credit vehicles here — Form 8849 Schedule 6"*)
 - `Select Tax Year *` (`2026-2027`, `2025-2026`) & `Select Your First Used Month *` (`July` through `June` with statutory due date banner).
-- Checkboxes with TruckDues tooltips:
+- Checkboxes with tooltips:
   - `[ ] Final Return`
   - `[ ] Address Change`
   - `[ ] Third Party Designee` (`Third Party Assigned`)
@@ -100,7 +100,7 @@ Adapts dynamically to the return type chosen in Step 1:
 - Business Information, Filing & IRS Payment Details, Vehicle Details breakdown + `[Verify VIN Details]` modal, Tax Due summary, red **`[View Tax Form in PDF]`** (`/api/filings/[id]/form2290`), and red **`[Submit Return To IRS]`** button.
 
 ### Step 8: `Submit Return` / `Finish`
-- `Transaction PIN` 5-digit modal, 3-Stage Visual Status Tracker (`Tax Return Completed`, `Tax Return Submitted`, `Sch-1 Receipt Ready`), and printable TruckDues `Payment Receipt` / Invoice (`233 Wilson Pike Cir, Ste 2A, Brentwood, TN 37027`).
+- `Transaction PIN` 5-digit modal, 3-Stage Visual Status Tracker (`Tax Return Completed`, `Tax Return Submitted`, `Sch-1 Receipt Ready`), and printable `Payment Receipt` / Invoice.
 
 ---
 
@@ -111,7 +111,7 @@ Adapts dynamically to the return type chosen in Step 1:
 
 ---
 
-## 6. TruckDues Dashboard (`/dashboard`) & Interactive 2290 User Guide (`/user-guide`)
+## 6. Application Dashboard (`/dashboard`) & Interactive 2290 User Guide (`/user-guide`)
 1. `/dashboard`: `My Business` bar + `Return Summary` table (`Return ID`, `Form Type`, `Return Date`, `Return Status`, `Filing Method`, `Action`, `View PDF`, `Schedule1 PDF`, `MeF XML`).
-2. `/user-guide`: Interactive step-by-step walkthrough replicating `https://www.truckdues.com/2290-user-guide-2290/`.
+2. `/user-guide`: Interactive step-by-step walkthrough.
 

@@ -1,4 +1,4 @@
-# Complete Plain-English Guide: Truck Tax (IRS Form 2290), TruckDues.com & How This Application Works
+# Complete Plain-English Guide: Truck Tax (IRS Form 2290), IRS-HVUT v1.1 & How This Application Works
 
 > **Word Document Version:** Also saved as [Understanding_Truck_Tax_Form_2290_and_App_Guide.docx](Understanding_Truck_Tax_Form_2290_and_App_Guide.docx) so you can open it directly in Microsoft Word.
 
@@ -47,19 +47,19 @@ The IRS puts every heavy truck into a **Weight Category (`A` through `V`, plus `
 
 ---
 
-## 4. Why Does [TruckDues.com](https://www.truckdues.com/) Exist?
+## 4. Why Does an Online E-File Platform Exist?
 
 The IRS does **not** have a free consumer website where a truck driver can easily fill out Form 2290 online.
 - If a trucker mails a **paper Form 2290** to the IRS, it takes **4 to 6 weeks** to receive their stamped Schedule 1 back by mail—leaving their truck stuck in the parking lot unable to get DMV tags.
-- **How [TruckDues.com](https://www.truckdues.com/) works:**
-  1. TruckDues.com is an **IRS-Authorized Modernized e-File (MeF) Provider**.
-  2. A trucker logs in, enters their **Business EIN** and **Truck VIN(s)** using simple web forms, and pays a small **website service fee** to TruckDues.com.
-  3. TruckDues.com converts their form into specialized **IRS MeF XML code**, transmits it electronically to the IRS servers, and receives the **IRS-watermarked Schedule 1 PDF within minutes** so the trucker can go straight to the DMV.
+- **How modern Form 2290 e-filing works:**
+  1. The platform is an **IRS-Authorized Modernized e-File (MeF) Provider**.
+  2. A trucker logs in, enters their **Business EIN** and **Truck VIN(s)** using simple web forms, and pays a small **platform service fee**.
+  3. The platform converts their form into specialized **IRS MeF XML code**, transmits it electronically to the IRS servers, and receives the **IRS-watermarked Schedule 1 PDF within minutes** so the trucker can go straight to the DMV.
 
 ### Crucial Concept: Two Separate Payments!
-On TruckDues.com—and in this application—there are always **two completely separate payments**:
-1. **Stream A — Website Service Fee (Paid to TruckDues / the Platform):** A small software fee (e.g., \$7.99+ for 1 truck) paid by credit/debit card to use the e-filing website.
-2. **Stream B — IRS Tax Payment (Paid to the US Government):** The actual HVUT tax (e.g., \$550) paid directly to the IRS via:
+In this application, there are always **two completely separate payments**:
+1. **Stream A — Platform Service Fee (Paid to Platform):** A small software fee (e.g., $7.99+ for 1 truck) paid by credit/debit card to use the e-filing platform.
+2. **Stream B — IRS Tax Payment (Paid to the US Government):** The actual HVUT tax (e.g., $550) paid directly to the IRS via:
    - **EFW (Electronic Funds Withdrawal):** Direct bank debit using routing + account number
    - **EFTPS:** The government's Electronic Federal Tax Payment System
    - **IRS Credit/Debit Card Processor**
@@ -69,7 +69,7 @@ On TruckDues.com—and in this application—there are always **two completely s
 
 ## 5. What Is the Purpose of THIS Application?
 
-This application is a **full-stack working clone & simulator of a TruckDues.com-style Form 2290 e-filing platform**.
+This application is a **full-stack commercial Form 2290 e-filing platform (IRS-HVUT v1.1)**.
 
 - **Why is it a simulator?**
   Connecting to the live IRS computer network requires an official IRS **EFIN/ETIN** license, fingerprinting, and FBI background checks.
@@ -94,7 +94,7 @@ In the top header, you can switch between **4 pre-loaded user accounts** to see 
 - Download the **Watermarked Schedule 1 PDF**, **Form 2290-V Payment Voucher PDF**, or inspect the generated **IRS MeF XML**.
 
 ### C. File Form 2290 Wizard (`/file/new`)
-Just like TruckDues.com, filing takes **4 simple steps**:
+Filing takes simple structured steps:
 1. **Step 1 — Business & Tax Period:** Pick your Business (EIN), Tax Year (`2026-2027`), and First-Used Month (`July` = 12 months, etc.).
 2. **Step 2 — Vehicles (VINs & Weights):**
    - Type a 17-character VIN, click **"Generate Valid Test VIN"**, or **Import a CSV file**.
@@ -105,7 +105,7 @@ Just like TruckDues.com, filing takes **4 simple steps**:
    - Enter a test card (`4242...` approves; `4000...` declines) and optional promo code (`TRUCK10`, `FLEET25`, `POCFREE`) or SMS/Fax add-ons.
    - Choose your IRS Tax Payment method (`EFW`, `EFTPS`, `CARD`, or `CHECK`).
    - Sign with a **5-digit Self-Select PIN** and click **Submit**.
-   - *(Bonus Rule from TruckDues.com: If a filing was rejected by the IRS and you edit & resubmit it, the website fee is automatically waived to **\$0**!)*
+   - *(Bonus Policy: If a filing was rejected by the IRS and you edit & resubmit it, the platform fee is automatically waived to **$0**!)*
 
 ### D. Post-Filing Corrections & Refunds (`/post-filing`)
 Handles the 3 real-world things that happen *after* a trucker files Form 2290:
