@@ -209,7 +209,7 @@ function seedIfEmpty(db: DatabaseSync) {
   if (cfgRow.cnt === 0) {
     db.prepare(
       "INSERT INTO simulator_config (id, mode, simulated_delay_ms, forced_reject_code, efin, etin, software_id) VALUES (1, ?, ?, ?, ?, ?, ?)",
-    ).run("AUTO_ACCEPT", 500, "F2290-001", "990001", "SIM01", "TD2290-V11");
+    ).run("AUTO_ACCEPT", 500, "F2290-001", "990001", "SIM01", "HVUT2290-V11");
   }
 }
 

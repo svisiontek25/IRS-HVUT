@@ -158,13 +158,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      {/* Green Dashboard Header matching td-dashboard.png */}
+      {/* Dashboard Header */}
       <div className="flex items-center gap-2 text-[#1e40af]">
         <Gauge className="w-6 h-6" />
         <h1 className="text-[24px] font-normal">Dashboard</h1>
       </div>
 
-      {/* My Business Selector Bar matching td-dashboard.png */}
+      {/* My Business Selector Bar */}
       <div className="space-y-1.5">
         <div className="text-xs font-medium text-[#333]">My Business</div>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -227,7 +227,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Return Summary Panel matching td-dashboard.png */}
+      {/* Return Summary Panel */}
       <div className="bg-white border border-[#cccccc] rounded-[2px] p-5 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-sm font-normal text-[#333]">Return Summary</div>
