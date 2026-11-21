@@ -480,9 +480,11 @@ const WATERMARK_CONFIG = {
 ## 9. DevOps, CI/CD & Hosting Infrastructure
 
 ### Recommended Hosting Topology
-- **Hostinger KVM VPS** (or AWS ECS / EKS with RDS PostgreSQL).
-- **Process Management:** PM2 running Next.js server on cluster mode (`ecosystem.config.cjs`).
-- **Nginx Reverse Proxy:** Port 80/443 SSL termination forwarding to localhost:3000.
+- **Production Server:** Ubuntu 22.04 / 24.04 LTS VPS (Hostinger KVM VPS, AWS EC2, or DigitalOcean).
+- **Domain & DNS:** Production domain `irs.svisiontek.com` pointing to VPS IP via DNS A Record.
+- **Process Management:** Systemd service (`deploy/systemd/irs-hvut.service`) or PM2 running Next.js on port 3000.
+- **Nginx Reverse Proxy:** Port 80/443 SSL termination forwarding to `127.0.0.1:3000` with HTTP/2 and WebSocket support (`deploy/nginx/irs-hvut.conf`).
+- **SSL / TLS Certificate:** Automated Let's Encrypt TLS 1.3 certificates via Certbot with automatic 60-day renewal (`deploy/certbot/init-letsencrypt.sh`).
 
 ### PM2 Configuration (`ecosystem.config.cjs`)
 ```javascript
