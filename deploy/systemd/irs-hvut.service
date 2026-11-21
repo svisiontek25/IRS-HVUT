@@ -1,0 +1,41 @@
+# ==============================================================================
+# IRS-HVUT v1.1 - Systemd Production Service Unit
+# Install Location: /etc/systemd/system/irs-hvut.service
+# ==============================================================================
+
+[Unit]
+Description=IRS-HVUT Form 2290 Next.js Production Service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/irs-hvut
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=127.0.0.1
+
+# Command to execute (built Next.js server)
+ExecStart=/usr/bin/npm run start
+
+# Automatic restart on failure
+Restart=always
+RestartSec=5s
+
+# Security sandboxing
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+# Standard output and error logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=irs-hvut
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
