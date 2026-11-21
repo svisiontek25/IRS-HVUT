@@ -6,14 +6,8 @@
 
 set -euo pipefail
 
-DOMAIN="${1:-}"
-EMAIL="${2:-}"
-
-if [[ -z "$DOMAIN" || -z "$EMAIL" ]]; then
-    echo "Usage: sudo ./init-letsencrypt.sh <yourdomain.com> <admin-email@example.com>"
-    echo "Example: sudo ./init-letsencrypt.sh irs-hvut.com admin@irs-hvut.com"
-    exit 1
-fi
+DOMAIN="${1:-irs.svisiontek.com}"
+EMAIL="${2:-contact@svisiontek.com}"
 
 echo "=========================================================="
 echo " Starting SSL Setup for Domain: $DOMAIN"
@@ -52,7 +46,6 @@ echo "[4/6] Requesting SSL Certificate from Let's Encrypt..."
 certbot certonly --webroot \
     -w /var/www/certbot \
     -d "$DOMAIN" \
-    -d "www.$DOMAIN" \
     --email "$EMAIL" \
     --agree-tos \
     --no-eff-email \

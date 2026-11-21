@@ -51,13 +51,15 @@ Before configuring Nginx and SSL, configure your public DNS records with your re
 
 | Record Type | Host / Name | Value / Destination | TTL |
 |---|---|---|---|
-| **A Record** | `@` (or `yourdomain.com`) | `YOUR_SERVER_PUBLIC_IP` (e.g. `203.0.113.50`) | Automatic or 300s |
-| **A Record** or **CNAME** | `www` | `yourdomain.com` (or server IP) | Automatic or 300s |
+| **A Record** | `irs` | `YOUR_SERVER_PUBLIC_IP` (e.g. `203.0.113.50`) | Automatic or 300s |
+
+*(Note: Under your domain DNS management for `svisiontek.com`, add an **A Record** with Name/Host `irs` pointing to your server's IP).*
 
 Verify DNS propagation from your terminal:
 ```bash
-dig +short yourdomain.com
-dig +short www.yourdomain.com
+dig +short irs.svisiontek.com
+# Should return your server public IP address
+```
 ```
 
 Ensure ports **80** (HTTP) and **443** (HTTPS) are allowed through your server firewall:
@@ -140,34 +142,29 @@ curl -I http://127.0.0.1:3000
 sudo openssl dhparam -out /etc/nginx/dhparam.pem 2048
 ```
 
-2. Copy the Nginx configuration:
+2. Copy the pre-configured Nginx site definition:
 ```bash
 sudo cp deploy/nginx/irs-hvut.conf /etc/nginx/sites-available/irs-hvut.conf
 ```
 
-3. Replace `yourdomain.com` with your real domain:
-```bash
-sudo sed -i 's/yourdomain.com/YOUR_ACTUAL_DOMAIN.com/g' /etc/nginx/sites-available/irs-hvut.conf
-```
-
-4. Enable the site and remove the default Nginx welcome page:
+3. Enable the site and remove the default Nginx placeholder:
 ```bash
 sudo ln -sf /etc/nginx/sites-available/irs-hvut.conf /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 ```
 
-5. Run the automated Let's Encrypt script:
+4. Run the automated Let's Encrypt script for `irs.svisiontek.com`:
 ```bash
 sudo chmod +x deploy/certbot/init-letsencrypt.sh
-sudo ./deploy/certbot/init-letsencrypt.sh YOUR_ACTUAL_DOMAIN.com admin@YOUR_ACTUAL_DOMAIN.com
+sudo ./deploy/certbot/init-letsencrypt.sh irs.svisiontek.com contact@svisiontek.com
 ```
 
 *(Alternatively, you can run Certbot directly)*:
 ```bash
-sudo certbot --nginx -d YOUR_ACTUAL_DOMAIN.com -d www.YOUR_ACTUAL_DOMAIN.com --email admin@YOUR_ACTUAL_DOMAIN.com --agree-tos --redirect
+sudo certbot --nginx -d irs.svisiontek.com --email contact@svisiontek.com --agree-tos --redirect
 ```
 
-6. Test Nginx configuration and reload:
+5. Test Nginx configuration and reload:
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
@@ -203,8 +200,8 @@ cd deploy/docker
 2. Create a `.env` file with your production environment variables:
 ```bash
 cat <<EOF > .env
-DOMAIN=yourdomain.com
-EMAIL=admin@yourdomain.com
+DOMAIN=irs.svisiontek.com
+EMAIL=contact@svisiontek.com
 STRIPE_SECRET_KEY=sk_live_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 EOF
@@ -229,11 +226,11 @@ Once deployed, run these verification tests:
 
 | Verification Test | Command / URL | Expected Result |
 |---|---|---|
-| **HTTP to HTTPS Redirect** | `curl -I http://yourdomain.com` | `HTTP/1.1 301 Moved Permanently`<br>`Location: https://yourdomain.com/` |
-| **HSTS Header Present** | `curl -I https://yourdomain.com` | `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` |
-| **MIME Sniffing Prevention** | `curl -I https://yourdomain.com` | `X-Content-Type-Options: nosniff` |
-| **Clickjacking Protection** | `curl -I https://yourdomain.com` | `X-Frame-Options: SAMEORIGIN` |
-| **SSL Labs Grade** | `https://www.ssllabs.com/ssltest/analyze.html?d=yourdomain.com` | **Rating: A+** |
+| **HTTP to HTTPS Redirect** | `curl -I http://irs.svisiontek.com` | `HTTP/1.1 301 Moved Permanently`<br>`Location: https://irs.svisiontek.com/` |
+| **HSTS Header Present** | `curl -I https://irs.svisiontek.com` | `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` |
+| **MIME Sniffing Prevention** | `curl -I https://irs.svisiontek.com` | `X-Content-Type-Options: nosniff` |
+| **Clickjacking Protection** | `curl -I https://irs.svisiontek.com` | `X-Frame-Options: SAMEORIGIN` |
+| **SSL Labs Grade** | `https://www.ssllabs.com/ssltest/analyze.html?d=irs.svisiontek.com` | **Rating: A+** |
 | **Static Asset Caching** | Inspect `/_next/static/...` in browser DevTools | `Cache-Control: public, max-age=31536000, immutable` |
 | **Rate Limiter Test** | Run 10 rapid POSTs to `/api/auth/login` | `HTTP/1.1 429 Too Many Requests` after burst threshold |
 | **Schedule 1 PDF Generation** | Navigate to `/dashboard` -> Download Schedule 1 | Watermarked Schedule 1 PDF streams instantly |
